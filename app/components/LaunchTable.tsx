@@ -12,10 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  Calendar,
-  Filter,
-} from "lucide-react";
+import { Calendar, Filter } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Table,
@@ -26,7 +23,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "@remix-run/react";
 import {
   Select,
@@ -39,119 +36,14 @@ import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import DateRangePicker from "./DateRangePicker";
 import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
 import { format } from "date-fns";
-const data: TLaunch[] = [
-  {
-    id: "01",
-    launched: "24 March 2006 at 22:30",
-    location: "Kwajalein Atoll",
-    mission: "FalconSat",
-    orbit: "LEO",
-    status: "Failed",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "02",
-    launched: "28 September 2008 23:15",
-    location: "Kwajalein Atoll",
-    mission: "RatSat",
-    orbit: "LEO",
-    status: "Success",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "03",
-    launched: "04 June 2010 18:45",
-    location: "CCAFS SLC 40",
-    mission: "Falcon 9 Test Flight",
-    orbit: "LEO",
-    status: "Success",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "04",
-    launched: "06 December 2020 16:17",
-    location: "KSC LC 39A",
-    mission: "CRS-21",
-    orbit: "ISS",
-    status: "Upcoming",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "05",
-    launched: "24 March 2006 at 22:30",
-    location: "Kwajalein Atoll",
-    mission: "FalconSat",
-    orbit: "LEO",
-    status: "Failed",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "06",
-    launched: "28 September 2008 23:15",
-    location: "Kwajalein Atoll",
-    mission: "RatSat",
-    orbit: "LEO",
-    status: "Success",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "07",
-    launched: "04 June 2010 18:45",
-    location: "CCAFS SLC 40",
-    mission: "Falcon 9 Test Flight",
-    orbit: "LEO",
-    status: "Success",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "08",
-    launched: "06 December 2020 16:17",
-    location: "KSC LC 39A",
-    mission: "CRS-21",
-    orbit: "ISS",
-    status: "Upcoming",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "09",
-    launched: "24 March 2006 at 22:30",
-    location: "Kwajalein Atoll",
-    mission: "FalconSat",
-    orbit: "LEO",
-    status: "Failed",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "10",
-    launched: "28 September 2008 23:15",
-    location: "Kwajalein Atoll",
-    mission: "RatSat",
-    orbit: "LEO",
-    status: "Success",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "11",
-    launched: "04 June 2010 18:45",
-    location: "CCAFS SLC 40",
-    mission: "Falcon 9 Test Flight",
-    orbit: "LEO",
-    status: "Success",
-    rocket: "Falcon 9",
-  },
-  {
-    id: "12",
-    launched: "06 December 2020 16:17",
-    location: "KSC LC 39A",
-    mission: "CRS-21",
-    orbit: "ISS",
-    status: "Upcoming",
-    rocket: "Falcon 9",
-  },
-];
-
-export type TLaunch = {
-  id: string;
+import { useQuery } from "@tanstack/react-query";
+import {  TPayload } from "~/lib/types/payload";
+import axios from "axios";
+import { TApiRespons } from "~/lib/types";
+import { TRocket } from "~/lib/types/rocket";
+import { TLaunchPad } from "~/lib/types/launchPad";
+export type TLaunchTable = {
+  no: number;
   launched: string;
   location: string;
   mission: string;
@@ -160,33 +52,32 @@ export type TLaunch = {
   rocket: string;
 };
 
-export const columns: ColumnDef<TLaunch>[] = [
+export const columns: ColumnDef<TLaunchTable>[] = [
   {
-    accessorKey: "id",
+    accessorKey: "no",
     header: "No.",
-    cell: ({ row }) => <div className="font-medium">{row.getValue("id")}</div>,
   },
   {
     accessorKey: "launched",
     header: "Launched (UTC)",
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue("launched")}</div>
-    ),
+    // cell: ({ row }) => (
+    //   <div className="font-medium">{row.getValue("launched")}</div>
+    // ),
   },
   {
     accessorKey: "location",
     header: "Location",
-    cell: ({ row }) => <div>{row.getValue("location")}</div>,
+    // cell: ({ row }) => <div>{row.getValue("location")}</div>,
   },
   {
     accessorKey: "mission",
     header: "Mission",
-    cell: ({ row }) => <div>{row.getValue("mission")}</div>,
+    // cell: ({ row }) => <div>{row.getValue("mission")}</div>,
   },
   {
     accessorKey: "orbit",
     header: "Orbit",
-    cell: ({ row }) => <div>{row.getValue("orbit")}</div>,
+    // cell: ({ row }) => <div>{row.getValue("orbit")}</div>,
   },
   {
     accessorKey: "status",
@@ -218,18 +109,74 @@ export const columns: ColumnDef<TLaunch>[] = [
   {
     accessorKey: "rocket",
     header: "Rocket",
-    cell: ({ row }) => <div>{row.getValue("rocket")}</div>,
+    cell: ({ row }) => <p className="text-nowrap">{row.getValue("rocket")}</p>,
   },
 ];
-
+async function getLaunches() {
+  return await axios.get(`https://api.spacexdata.com/v4/launches`);
+}
+async function getRockets() {
+  return await axios.get(`https://api.spacexdata.com/v4/rockets`);
+}
+async function getPayloads() {
+  return await axios.get(`https://api.spacexdata.com/v4/payloads`);
+}
+async function getLauncPads() {
+  return await axios.get(`https://api.spacexdata.com/v4/launchpads`);
+}
 export default function LaunchesTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [data, setData] = useState<TLaunchTable[] | null>(null);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+  const { data: launchesData } = useQuery<TApiRespons<TLaunch[]>>({
+    queryFn: getLaunches,
+    queryKey: ["get_launches"],
+  });
+  const { data: rocketsData } = useQuery<TApiRespons<TRocket[]>>({
+    queryKey: ["get_rockets"],
+    queryFn: getRockets,
+  });
+  const { data: payloadData } = useQuery<TApiRespons<TPayload[]>>({
+    queryKey: ["get_rockets"],
+    queryFn: getPayloads,
+  });
+  const { data: launchPadsData } = useQuery<TApiRespons<TLaunchPad[]>>({
+    queryKey: ["get_launch_pads"],
+    queryFn: getLauncPads,
+  });
+  useEffect(() => {
+    if (!launchesData || !rocketsData || !payloadData ||!launchPadsData) return;
+    let data:TLaunchTable[]=[];
+    let no = 1;
+    for(let launch of launchesData?.data){
+      const launchPad = launchPadsData?.data?.find( (lp => lp?.id===launch?.launchpad))
+      const payload = payloadData?.data?.find(
+        (pl) => pl?.id === launch?.payloads?.[0]
+      );
+      const rocket = rocketsData?.data?.find(
+        (rkt) => rkt?.id === launch?.rocket
+      );
+      data.push({
+        no: no++,
+        launched: format(launch.date_utc, "dd MMM yyyy  hh:mm"),
+        location: launchPad?.full_name || "",
+        mission: launch?.name,
+        orbit: payload?.orbit || "",
+        rocket: rocket?.name || "",
+        status: launch?.success
+          ? "Success"
+          : launch?.upcoming
+          ? "Upcoming"
+          : "Failed",
+      });
+    }
+    setData(data)
+  }, [launchesData, rocketsData, payloadData, launchPadsData]);
 
   const table = useReactTable({
-    data,
+    data: data || [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -258,7 +205,7 @@ export default function LaunchesTable() {
         <TimeFilter />
         <StatusFilter />
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border px-2">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -357,7 +304,9 @@ function StatusFilter() {
         </SelectTrigger>
         <SelectContent>
           {launchStatus.map((status) => (
-            <SelectItem key={status.title} value={status.value}>{status.title}</SelectItem>
+            <SelectItem key={status.title} value={status.value}>
+              {status.title}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -366,11 +315,10 @@ function StatusFilter() {
 }
 //////////////////////////////////////////
 function TimeFilter() {
-  const {getParams} = useUrlSearchParams();
-  const from = getParams("from")
+  const { getParams } = useUrlSearchParams();
+  const from = getParams("from");
   const to = getParams("to");
   const dateRange = getParams("dateRange");
-
 
   return (
     <Dialog>
@@ -387,17 +335,17 @@ function TimeFilter() {
       </DialogContent>
     </Dialog>
   );
-
 }
 
-{/* <SelectTrigger className="w-fit gap-2 border-none shadow-none">
+{
+  /* <SelectTrigger className="w-fit gap-2 border-none shadow-none">
   <Calendar size={16} />
   <SelectValue placeholder="Select time duration" />
-</SelectTrigger>; */}
-
+</SelectTrigger>; */
+}
 
 //////////////////////////////////////////
-function Pagination({ table }: { table: TTable<TLaunch> }) {
+function Pagination({ table }: { table: TTable<TLaunchTable> }) {
   return (
     <div className="flex items-center justify-end space-x-2 py-4">
       <div className="flex-1 text-sm text-muted-foreground">

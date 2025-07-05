@@ -6,6 +6,10 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query'
 
 import "./tailwind.css";
 
@@ -23,6 +27,7 @@ export const links: LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const queryClient = new QueryClient();
   return (
     <html lang="en">
       <head>
@@ -32,8 +37,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
-        <ScrollRestoration />
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <ScrollRestoration />
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
