@@ -6,6 +6,9 @@ import dayjs from "dayjs";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
 import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
+import { useLaunches } from "store/store";
+import { Button } from "./ui/button";
+import { useNavigate } from "@remix-run/react";
 
 const predefinedRanges = {
   "Past Week": {
@@ -35,32 +38,51 @@ const predefinedRanges = {
 };
 
 export default function DateRangePicker() {
+  const { launchesData, setTableData, tableData } = useLaunches();
   const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: addDays(new Date(), 30),
+    from: new Date(2022, 1, 1),
+    to: addDays(new Date(2022, 1, 1), 30),
   });
-  const { setParams, removeParams } = useUrlSearchParams();
+  const navigate = useNavigate();
+  const { setParams, removeParams, getParams } = useUrlSearchParams();
   const [selectedRange, setSelectedRange] = React.useState<string | null>(null);
   const handleRangeClick = (range: string) => {
-    const { start, end } = predefinedRanges[range];
+    //@ts-ignore
+    const { start, end } = predefinedRanges[range] ;
+    const filtered =
+      tableData?.filter(
+        (data) => data.launched >= start && data.launched <= end
+      ) || [];
+    setTableData(filtered);
     setDate({ from: start, to: end });
     setSelectedRange(range);
     setParams("dateRange", range);
-    removeParams("from");
-    removeParams("to");
+    setParams("from", start.toISOString());
+    setParams("to", end.toISOString());
     // Close the calendar popover when a range is selected
   };
-  function handleCalendarClick(dateRange: DateRange | undefined) {
+  function handleCalendarClick(dateRange: DateRange) {
+    // const filtered =
+    //   tableData?.filter(
+    //     (data) =>
+    //       data.launched >= dateRange.from.toISOString() &&
+    //       data.launched <= dateRange.to.toISOString()
+    //   ) || [];
+    // setTableData(filtered);
     setDate(dateRange);
     setParams("from", date?.from?.toISOString() || "");
     setParams("to", date?.to?.toISOString() || "");
     removeParams("dateRange");
   }
+  function resetFilters() {
+    navigate("/");
+    setTableData(launchesData || []);
+  }
   return (
     <div className="flex gap-6">
       <div className="w-60 p-4 bg-white rounded-lg">
         <p className="font-bold text-lg mb-4">Predefined Ranges</p>
-        <ul>
+        <ul className="flex flex-col ">
           {Object.keys(predefinedRanges).map((range) => (
             <li
               key={range}
@@ -72,9 +94,14 @@ export default function DateRangePicker() {
               {range}
             </li>
           ))}
+          <li className=" mt-5">
+            <Button onClick={resetFilters}>Reset filters</Button>
+          </li>
         </ul>
       </div>
       <Calendar
+        required
+        defaultMonth={new Date(2022, 0, 1)}
         mode="range"
         numberOfMonths={2}
         selected={date}

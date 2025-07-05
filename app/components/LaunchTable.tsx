@@ -67,9 +67,11 @@ export const columns: ColumnDef<TLaunchTable>[] = [
   {
     accessorKey: "launched",
     header: "Launched (UTC)",
-    // cell: ({ row }) => (
-    //   <div className="font-medium">{row.getValue("launched")}</div>
-    // ),
+    cell: ({ row }) => (
+      <div className="font-medium">
+        {format(row.getValue("launched"), "dd MMM yyyy  hh:mm")}
+      </div>
+    ),
   },
   {
     accessorKey: "location",
@@ -132,16 +134,20 @@ async function getLaunchPads() {
   return await axios.get(`https://api.spacexdata.com/v4/launchpads`);
 }
 export default function LaunchesTable() {
-  const { setLaunchesData, tableData, setTableData } = useLaunches();
+  const {
+    setLaunchesData,
+    tableData,
+    setTableData,
+    launchesData: launchesFromStore,
+  } = useLaunches();
   const { getParams } = useUrlSearchParams();
   const from = getParams("from");
   const to = getParams("to");
+  const status = getParams("status");
   const dateRange = getParams("dateRange");
   const [sorting, setSorting] = useState<SortingState>([]);
-  // const [data, setData] = useState<TLaunchTable[] | null>(null);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  // const [tableData, setTableData] = useState<TLaunchTable[]>([]);
   const [rowSelection, setRowSelection] = useState({});
   const { data: launchesData } = useQuery<TApiRespons<TLaunch[]>>({
     queryFn: getLaunches,
@@ -175,7 +181,7 @@ export default function LaunchesTable() {
       );
       data.push({
         no: no++,
-        launched: format(launch.date_utc, "dd MMM yyyy  hh:mm"),
+        launched: launch.date_utc,
         location: launchPad?.full_name || "",
         mission: launch?.name,
         orbit: payload?.orbit || "",
@@ -219,6 +225,41 @@ export default function LaunchesTable() {
       },
     },
   });
+  useEffect(() => {
+    if (!launchesFromStore) return;
+    if (to && from && status) {
+      if (status === "all") {
+        const filtered =
+          launchesFromStore?.filter(
+            (data) => data.launched >= from && data.launched <= to
+          ) || [];
+        setTableData(filtered);
+        return;
+      }
+      const filtered =
+        launchesFromStore?.filter(
+          (data) =>
+            data.launched >= from &&
+            data.launched <= to &&
+            data.status === status
+        ) || [];
+      setTableData(filtered);
+    } else if (to && from) {
+      const filtered =
+        launchesFromStore?.filter(
+          (data) => data.launched >= from && data.launched <= to
+        ) || [];
+      setTableData(filtered);
+    } else if (status) {
+      if (status === "all") {
+        setTableData(launchesFromStore || []);
+        return;
+      }
+      const filtered =
+        launchesFromStore?.filter((data) => data.status === status) || [];
+      setTableData(filtered);
+    }
+  }, [to, from, status, launchesFromStore]);
   return (
     <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
       <div className="flex justify-between itens-center">
@@ -286,25 +327,25 @@ export default function LaunchesTable() {
 
 ///////////////////////////////////
 function StatusFilter({}) {
-  const [searchParms, setSearchParams] = useSearchParams();
-  const { setTableData, launchesData } = useLaunches();
+  const { setParams, getParams } = useUrlSearchParams();
+  const { setTableData, launchesData, tableData } = useLaunches();
   function handleFilterChange(status: TStatus) {
-    if (status === "all") {
-      setTableData(launchesData || []);
-    } else {
-      const filtered =
-        launchesData?.filter((data) => data.status === status) || [];
-      setTableData(filtered);
-    }
-    setSearchParams(
-      (prev) => {
-        prev.set("status", status);
-        return prev;
-      },
-      {
-        preventScrollReset: true,
-      }
-    );
+    // if (status === "all") {
+    //   const to = getParams("to");
+    //   const from = getParams("from");
+    //   if (to && from) {
+    //     const filtered =
+    //       launchesData?.filter(
+    //         (data) => data.launched >= from && data.launched <= to
+    //       ) || [];
+    //     setTableData(filtered);
+    //   } else setTableData(launchesData || []);
+    // } else {
+    //   const filtered =
+    //     launchesData?.filter((data) => data.status === status) || [];
+    //   setTableData(filtered);
+    // }
+    setParams("status", status);
   }
   const launchStatus = [
     {
@@ -324,9 +365,13 @@ function StatusFilter({}) {
       value: "Upcoming",
     },
   ];
+
   return (
     <>
-      <Select onValueChange={handleFilterChange}>
+      <Select
+        value={getParams("status") || ""}
+        onValueChange={handleFilterChange}
+      >
         <SelectTrigger className="w-fit gap-2 border-none shadow-none">
           <Filter size={16} />
           <SelectValue placeholder="Select Status" />
@@ -354,11 +399,13 @@ function TimeFilter() {
       <DialogTrigger className="flex items-center gap-2">
         <Calendar size={16} />
         {/* Select Time */}
-        {to && format(to, "dd-MMM-yy")}
-        {to && from && " - "}
-        {from && format(from, "dd-MMM-yy")}
-        {dateRange}
-        {!to && !dateRange && "Select date"}
+        {dateRange
+          ? dateRange
+          : from && to
+          ? `${from && format(from, "dd/MM/yy")} - ${
+              to && format(to, "dd/MM/yy")
+            }`
+          : "Select date"}
       </DialogTrigger>
       <DialogContent className="max-w-[60vw] !p-3">
         <DateRangePicker />
@@ -369,7 +416,7 @@ function TimeFilter() {
 
 //////////////////////////////////////////
 function Pagination({ table }: { table: TTable<TLaunchTable> }) {
-  const { tableData} = useLaunches();
+  const { tableData } = useLaunches();
   const totalPages = Math.ceil((tableData?.length || 1) / PAGE_SIZE);
   return (
     <div className="flex items-center mt-auto justify-end space-x-2 py-4">
@@ -394,23 +441,27 @@ function Pagination({ table }: { table: TTable<TLaunchTable> }) {
         >
           1
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.setPageIndex(1)}
-          disabled={table.getState().pagination.pageIndex === 1}
-        >
-          2
-        </Button>
+        {totalPages > 1 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.setPageIndex(1)}
+            disabled={table.getState().pagination.pageIndex === 1}
+          >
+            2
+          </Button>
+        )}
         <span className="px-2">...</span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.setPageIndex(totalPages)}
-          disabled={table.getState().pagination.pageIndex === totalPages}
-        >
-          {totalPages}
-        </Button>
+        {totalPages > 2 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.setPageIndex(totalPages - 1)}
+            disabled={table.getState().pagination.pageIndex === totalPages - 1}
+          >
+            {totalPages}
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

@@ -19,5 +19,6 @@ export default function useUrlSearchParams() {
         params.delete(key);
         setSearchParams(params,{preventScrollReset:true})
     }
+    
     return { setParams, getParams, removeParams }
 }
