@@ -11,7 +11,7 @@ type Fairings = {
     ships: string[]; // Array of ships (strings, assuming IDs or names)
 };
 
-type Links = {
+export type Links = {
     patch: {
         small: string;
         large: string;
@@ -45,7 +45,7 @@ type Core = {
     landpad: string | null;
 };
 
-type TLaunch = {
+export type TLaunch = {
     fairings: Fairings;
     links: Links;
     static_fire_date_utc: string;

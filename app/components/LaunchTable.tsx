@@ -23,11 +23,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -41,25 +37,30 @@ import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { TPayload } from "~/lib/types/payload";
-import { TApiRespons, TStatus } from "~/lib/types";
+import { TApiRespons, TLaunchDetail, TLaunchTable, TStatus } from "~/lib/types";
 import { TRocket } from "~/lib/types/rocket";
 import { TLaunchPad } from "~/lib/types/launchPad";
 import { useLaunches } from "store/store";
-import { getLaunches, getLaunchPads, getPayloads, getRockets } from "~/services/api";
-export type TLaunchTable = {
-  no: number;
-  launched: string;
-  location: string;
-  mission: string;
-  orbit: string;
-  status: "Success" | "Failed" | "Upcoming";
-  rocket: string;
-};
+import {
+  getLaunches,
+  getLaunchPads,
+  getPayloads,
+  getRockets,
+} from "~/services/api";
+import LaunchDetailDialog from "./LaunchDetailDialog";
+import { launchStatus } from "~/lib/constants";
+import { StatusFilter, TimeFilter } from "./Filters";
+import { TLaunch } from "~/lib/types/launch";
+
 const PAGE_SIZE = 12;
 export const columns: ColumnDef<TLaunchTable>[] = [
   {
     accessorKey: "no",
     header: "No.",
+  },
+  {
+    accessorKey: "id",
+    // header: "id",
   },
   {
     accessorKey: "launched",
@@ -132,15 +133,15 @@ export default function LaunchesTable() {
     setTableData,
     launchesData: launchesFromStore,
   } = useLaunches();
-  const { getParams } = useUrlSearchParams();
+  const { getParams, setParams } = useUrlSearchParams();
   const from = getParams("from");
   const to = getParams("to");
   const status = getParams("status");
-  const dateRange = getParams("dateRange");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+  const [isOpenDialog, setIsOpenDialog] = useState(false);
   const { data: launchesData } = useQuery<TApiRespons<TLaunch[]>>({
     queryFn: getLaunches,
     queryKey: ["get_launches"],
@@ -158,7 +159,7 @@ export default function LaunchesTable() {
     queryFn: getLaunchPads,
   });
   const getFilteredData = useCallback(() => {
-    let data: TLaunchTable[] = [];
+    let data: TLaunchDetail[] = [];
     let no = 1;
     if (!launchesData?.data) return [];
     for (let launch of launchesData?.data) {
@@ -172,6 +173,7 @@ export default function LaunchesTable() {
         (rkt) => rkt?.id === launch?.rocket
       );
       data.push({
+        id: launch.id,
         no: no++,
         launched: launch.date_utc,
         location: launchPad?.full_name || "",
@@ -183,6 +185,15 @@ export default function LaunchesTable() {
           : launch?.upcoming
           ? "Upcoming"
           : "Failed",
+        flightNumber: launch.flight_number,
+        rocketType: rocket?.type,
+        manufacturer: payload?.manufacturers?.[0],
+        nationality: payload?.nationalities?.[0],
+        payloadType: payload?.type,
+        launchSite: launchPad?.name,
+        image: launchPad?.images?.large?.[0],
+        links:launch.links,
+        description:rocket?.description
       });
     }
     return data;
@@ -217,6 +228,11 @@ export default function LaunchesTable() {
       },
     },
   });
+
+  function handleRowClick(id: string) {
+    setIsOpenDialog(true);
+    setParams("activeId", id);
+  }
   useEffect(() => {
     if (!launchesFromStore) return;
     if (to && from && status) {
@@ -253,156 +269,81 @@ export default function LaunchesTable() {
     }
   }, [to, from, status, launchesFromStore]);
   return (
-    <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
-      <div className="flex justify-between itens-center">
-        <TimeFilter />
-        <StatusFilter />
-      </div>
-      <div className="rounded-md border px-2">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-gray-50">
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className="font-medium text-gray-700 max-sm:text-sm"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, index) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className={index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination table={table} />
-    </div>
-  );
-}
-
-///////////////////////////////////
-function StatusFilter({}) {
-  const { setParams, getParams } = useUrlSearchParams();
-  const { setTableData, launchesData, tableData } = useLaunches();
-  function handleFilterChange(status: TStatus) {
-    // if (status === "all") {
-    //   const to = getParams("to");
-    //   const from = getParams("from");
-    //   if (to && from) {
-    //     const filtered =
-    //       launchesData?.filter(
-    //         (data) => data.launched >= from && data.launched <= to
-    //       ) || [];
-    //     setTableData(filtered);
-    //   } else setTableData(launchesData || []);
-    // } else {
-    //   const filtered =
-    //     launchesData?.filter((data) => data.status === status) || [];
-    //   setTableData(filtered);
-    // }
-    setParams("status", status);
-  }
-  const launchStatus = [
-    {
-      title: "All Launches",
-      value: "all",
-    },
-    {
-      title: "Successfull Only",
-      value: "Success",
-    },
-    {
-      title: "Failed Only",
-      value: "Failed",
-    },
-    {
-      title: "Upcoming Only",
-      value: "Upcoming",
-    },
-  ];
-
-  return (
     <>
-      <Select
-        value={getParams("status") || ""}
-        onValueChange={handleFilterChange}
-      >
-        <SelectTrigger className="w-fit gap-2 border-none shadow-none">
-          <Filter size={16} />
-          <SelectValue placeholder="Select Status" />
-        </SelectTrigger>
-        <SelectContent>
-          {launchStatus.map((status) => (
-            <SelectItem key={status.title} value={status.value}>
-              {status.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
+        <div className="flex justify-between itens-center">
+          <TimeFilter />
+          <StatusFilter />
+        </div>
+        <div className="rounded-md border px-2">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="bg-gray-50">
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className="font-medium text-gray-700 max-sm:text-sm"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row, index) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={
+                      index % 2 === 0
+                        ? "bg-white cursor-pointer"
+                        : "cursor-pointer bg-gray-50/50"
+                    }
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        onClick={() => handleRowClick(row.original.id)}
+                        key={cell.id}
+                        className="py-3"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <Pagination table={table} />
+      </div>
+      <LaunchDetailDialog
+        isOpen={isOpenDialog}
+        onClose={() => setIsOpenDialog(false)}
+      />
     </>
-  );
-}
-//////////////////////////////////////////
-function TimeFilter() {
-  const { getParams } = useUrlSearchParams();
-  const from = getParams("from");
-  const to = getParams("to");
-  const dateRange = getParams("dateRange");
-
-  return (
-    <Dialog>
-      <DialogTrigger className="flex items-center gap-2">
-        <Calendar size={16} />
-        {/* Select Time */}
-        {dateRange
-          ? dateRange
-          : from && to
-          ? `${from && format(from, "dd/MM/yy")} - ${
-              to && format(to, "dd/MM/yy")
-            }`
-          : "Select date"}
-      </DialogTrigger>
-      <DialogContent className="max-w-[60vw] !p-3">
-        <DateRangePicker />
-      </DialogContent>
-    </Dialog>
   );
 }
 
