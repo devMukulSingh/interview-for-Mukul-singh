@@ -12,15 +12,12 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Calendar, ChevronDown, Filter } from "lucide-react";
+import {
+  Calendar,
+  Filter,
+} from "lucide-react";
 
 import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -32,7 +29,13 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { useState } from "react";
 import { useSearchParams } from "@remix-run/react";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 const data: TLaunch[] = [
   {
     id: "01",
@@ -249,8 +252,8 @@ export default function LaunchesTable() {
   return (
     <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
       <div className="flex justify-between itens-center">
-        <StatusFilter />
         <TimeFilter />
+        <StatusFilter />
       </div>
       <div className="rounded-md border">
         <Table>
@@ -325,37 +328,55 @@ function StatusFilter() {
     );
   }
   const launchStatus = [
-    "All Launches",
-    "Successfull Only",
-    "Failed Only",
-    "Upcoming Only",
+    {
+      title: "All Launches",
+      value: "allLaunches",
+    },
+    {
+      title: "Successfull Only",
+      value: "successfullOnly",
+    },
+    {
+      title: "Failed Only",
+      value: "failedOnly",
+    },
+    {
+      title: "Upcoming Only",
+      value: "upcomingOnly",
+    },
   ];
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 bg-transparent">
-          <Filter className="h-4 w-4" />
-          Select Status
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {launchStatus.map((status, index) => (
-          <DropdownMenuCheckboxItem
-            checked={searchParms.get("status") === status}
-            onClick={() => handleFilterChange(status)}
-            key={index}
-          >
-            {status}
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <Select onValueChange={handleFilterChange}>
+        <SelectTrigger className="w-fit gap-2 border-none shadow-none">
+          <Filter size={16} />
+          <SelectValue placeholder="Select Status" />
+        </SelectTrigger>
+        <SelectContent>
+          {launchStatus.map((status) => (
+            <SelectItem key={status.title} value={status.value}>{status.title}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
   );
 }
 //////////////////////////////////////////
 function TimeFilter() {
-  const timeFilters = ["Past 6 Month", "Past Year", "All time"];
+  const timeFilters = [
+    {
+      title: "Past 6 Month",
+      value: "past6Month",
+    },
+    {
+      title: "Past Year",
+      value: "pastYear",
+    },
+    {
+      title: "All time",
+      value: "allTime",
+    },
+  ];
   const [searchParms, setSearchParams] = useSearchParams();
   function handleFilterChange(time: string) {
     setSearchParams(
@@ -369,26 +390,19 @@ function TimeFilter() {
     );
   }
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 bg-transparent">
-          <Calendar className="h-4 w-4" />
-          Select time
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {timeFilters.map((time, index) => (
-          <DropdownMenuCheckboxItem
-            checked={searchParms.get("time") === time}
-            onClick={() => handleFilterChange(time)}
-            key={index}
-          >
-            {time}
-          </DropdownMenuCheckboxItem>
+    <Select onValueChange={handleFilterChange}>
+      <SelectTrigger className="w-fit gap-2 border-none shadow-none">
+        <Calendar size={16} />
+        <SelectValue placeholder="Select time duration" />
+      </SelectTrigger>
+      <SelectContent>
+        {timeFilters.map((time) => (
+          <SelectItem key={time.title} value={time.value} className="">
+            {time.title}
+          </SelectItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </SelectContent>
+    </Select>
   );
 }
 //////////////////////////////////////////
