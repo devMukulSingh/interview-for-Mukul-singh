@@ -27,7 +27,13 @@ export const links: LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions:{
+      queries:{
+      refetchOnWindowFocus:false,
+      }
+    }
+  });
   return (
     <html lang="en">
       <head>

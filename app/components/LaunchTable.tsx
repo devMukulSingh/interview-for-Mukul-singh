@@ -23,7 +23,13 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
-import { useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { useSearchParams } from "@remix-run/react";
 import {
   Select,
@@ -37,11 +43,12 @@ import DateRangePicker from "./DateRangePicker";
 import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import {  TPayload } from "~/lib/types/payload";
+import { TPayload } from "~/lib/types/payload";
 import axios from "axios";
-import { TApiRespons } from "~/lib/types";
+import { TApiRespons, TStatus } from "~/lib/types";
 import { TRocket } from "~/lib/types/rocket";
 import { TLaunchPad } from "~/lib/types/launchPad";
+import { useLaunches } from "store/store";
 export type TLaunchTable = {
   no: number;
   launched: string;
@@ -51,7 +58,7 @@ export type TLaunchTable = {
   status: "Success" | "Failed" | "Upcoming";
   rocket: string;
 };
-
+const PAGE_SIZE = 12;
 export const columns: ColumnDef<TLaunchTable>[] = [
   {
     accessorKey: "no",
@@ -121,14 +128,20 @@ async function getRockets() {
 async function getPayloads() {
   return await axios.get(`https://api.spacexdata.com/v4/payloads`);
 }
-async function getLauncPads() {
+async function getLaunchPads() {
   return await axios.get(`https://api.spacexdata.com/v4/launchpads`);
 }
 export default function LaunchesTable() {
+  const { setLaunchesData, tableData, setTableData } = useLaunches();
+  const { getParams } = useUrlSearchParams();
+  const from = getParams("from");
+  const to = getParams("to");
+  const dateRange = getParams("dateRange");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [data, setData] = useState<TLaunchTable[] | null>(null);
+  // const [data, setData] = useState<TLaunchTable[] | null>(null);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  // const [tableData, setTableData] = useState<TLaunchTable[]>([]);
   const [rowSelection, setRowSelection] = useState({});
   const { data: launchesData } = useQuery<TApiRespons<TLaunch[]>>({
     queryFn: getLaunches,
@@ -139,19 +152,21 @@ export default function LaunchesTable() {
     queryFn: getRockets,
   });
   const { data: payloadData } = useQuery<TApiRespons<TPayload[]>>({
-    queryKey: ["get_rockets"],
+    queryKey: ["get_payloads"],
     queryFn: getPayloads,
   });
   const { data: launchPadsData } = useQuery<TApiRespons<TLaunchPad[]>>({
     queryKey: ["get_launch_pads"],
-    queryFn: getLauncPads,
+    queryFn: getLaunchPads,
   });
-  useEffect(() => {
-    if (!launchesData || !rocketsData || !payloadData ||!launchPadsData) return;
-    let data:TLaunchTable[]=[];
+  const getFilteredData = useCallback(() => {
+    let data: TLaunchTable[] = [];
     let no = 1;
-    for(let launch of launchesData?.data){
-      const launchPad = launchPadsData?.data?.find( (lp => lp?.id===launch?.launchpad))
+    if (!launchesData?.data) return [];
+    for (let launch of launchesData?.data) {
+      const launchPad = launchPadsData?.data?.find(
+        (lp) => lp?.id === launch?.launchpad
+      );
       const payload = payloadData?.data?.find(
         (pl) => pl?.id === launch?.payloads?.[0]
       );
@@ -172,11 +187,17 @@ export default function LaunchesTable() {
           : "Failed",
       });
     }
-    setData(data)
+    return data;
+  }, [launchesData, rocketsData, payloadData, launchPadsData]);
+  useEffect(() => {
+    if (!launchesData || !rocketsData || !payloadData || !launchPadsData)
+      return;
+    setLaunchesData(getFilteredData());
+    setTableData(getFilteredData());
   }, [launchesData, rocketsData, payloadData, launchPadsData]);
 
   const table = useReactTable({
-    data: data || [],
+    data: tableData || [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -198,7 +219,6 @@ export default function LaunchesTable() {
       },
     },
   });
-
   return (
     <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
       <div className="flex justify-between itens-center">
@@ -263,10 +283,19 @@ export default function LaunchesTable() {
     </div>
   );
 }
+
 ///////////////////////////////////
-function StatusFilter() {
+function StatusFilter({}) {
   const [searchParms, setSearchParams] = useSearchParams();
-  function handleFilterChange(status: string) {
+  const { setTableData, launchesData } = useLaunches();
+  function handleFilterChange(status: TStatus) {
+    if (status === "all") {
+      setTableData(launchesData || []);
+    } else {
+      const filtered =
+        launchesData?.filter((data) => data.status === status) || [];
+      setTableData(filtered);
+    }
     setSearchParams(
       (prev) => {
         prev.set("status", status);
@@ -280,19 +309,19 @@ function StatusFilter() {
   const launchStatus = [
     {
       title: "All Launches",
-      value: "allLaunches",
+      value: "all",
     },
     {
       title: "Successfull Only",
-      value: "successfullOnly",
+      value: "Success",
     },
     {
       title: "Failed Only",
-      value: "failedOnly",
+      value: "Failed",
     },
     {
       title: "Upcoming Only",
-      value: "upcomingOnly",
+      value: "Upcoming",
     },
   ];
   return (
@@ -329,6 +358,7 @@ function TimeFilter() {
         {to && from && " - "}
         {from && format(from, "dd-MMM-yy")}
         {dateRange}
+        {!to && !dateRange && "Select date"}
       </DialogTrigger>
       <DialogContent className="max-w-[60vw] !p-3">
         <DateRangePicker />
@@ -337,17 +367,12 @@ function TimeFilter() {
   );
 }
 
-{
-  /* <SelectTrigger className="w-fit gap-2 border-none shadow-none">
-  <Calendar size={16} />
-  <SelectValue placeholder="Select time duration" />
-</SelectTrigger>; */
-}
-
 //////////////////////////////////////////
 function Pagination({ table }: { table: TTable<TLaunchTable> }) {
+  const { tableData} = useLaunches();
+  const totalPages = Math.ceil((tableData?.length || 1) / PAGE_SIZE);
   return (
-    <div className="flex items-center justify-end space-x-2 py-4">
+    <div className="flex items-center mt-auto justify-end space-x-2 py-4">
       <div className="flex-1 text-sm text-muted-foreground">
         {table.getFilteredSelectedRowModel().rows.length} of{" "}
         {table.getFilteredRowModel().rows.length} row(s) selected.
@@ -381,10 +406,10 @@ function Pagination({ table }: { table: TTable<TLaunchTable> }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.setPageIndex(9)}
-          disabled={table.getState().pagination.pageIndex === 9}
+          onClick={() => table.setPageIndex(totalPages)}
+          disabled={table.getState().pagination.pageIndex === totalPages}
         >
-          10
+          {totalPages}
         </Button>
         <Button
           variant="outline"
