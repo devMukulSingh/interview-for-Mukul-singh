@@ -31,6 +31,7 @@ import {
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
 import { useState } from "react";
+import { useSearchParams } from "@remix-run/react";
 
 const data: TLaunch[] = [
   {
@@ -246,9 +247,9 @@ export default function LaunchesTable() {
   });
 
   return (
-    <div className="w-full p-6 bg-white xl:max-w-[1200px] self-center flex flex-col gap-5">
+    <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
       <div className="flex justify-between itens-center">
-        <Filters />
+        <StatusFilter />
         <TimeFilter />
       </div>
       <div className="rounded-md border">
@@ -310,12 +311,24 @@ export default function LaunchesTable() {
   );
 }
 ///////////////////////////////////
-function Filters() {
+function StatusFilter() {
+  const [searchParms, setSearchParams] = useSearchParams();
+  function handleFilterChange(status: string) {
+    setSearchParams(
+      (prev) => {
+        prev.set("status", status);
+        return prev;
+      },
+      {
+        preventScrollReset: true,
+      }
+    );
+  }
   const launchStatus = [
     "All Launches",
     "Successfull Only",
     "Failed Only",
-    "Upcoming Onl",
+    "Upcoming Only",
   ];
   return (
     <DropdownMenu>
@@ -328,7 +341,11 @@ function Filters() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {launchStatus.map((status, index) => (
-          <DropdownMenuCheckboxItem key={index}>
+          <DropdownMenuCheckboxItem
+            checked={searchParms.get("status") === status}
+            onClick={() => handleFilterChange(status)}
+            key={index}
+          >
             {status}
           </DropdownMenuCheckboxItem>
         ))}
@@ -339,6 +356,18 @@ function Filters() {
 //////////////////////////////////////////
 function TimeFilter() {
   const timeFilters = ["Past 6 Month", "Past Year", "All time"];
+  const [searchParms, setSearchParams] = useSearchParams();
+  function handleFilterChange(time: string) {
+    setSearchParams(
+      (prev) => {
+        prev.set("time", time);
+        return prev;
+      },
+      {
+        preventScrollReset: true,
+      }
+    );
+  }
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -350,7 +379,11 @@ function TimeFilter() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {timeFilters.map((time, index) => (
-          <DropdownMenuCheckboxItem key={index}>
+          <DropdownMenuCheckboxItem
+            checked={searchParms.get("time") === time}
+            onClick={() => handleFilterChange(time)}
+            key={index}
+          >
             {time}
           </DropdownMenuCheckboxItem>
         ))}
