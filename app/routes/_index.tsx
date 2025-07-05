@@ -1,5 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import Header from "~/components/header";
+import LaunchesTable from "~/components/LaunchTable";
 
 export const meta: MetaFunction = () => {
   return [
@@ -15,7 +16,7 @@ export default function Index() {
   return (
     <div className="flex flex-col w-full h-full">
       <Header/>
-      
+      <LaunchesTable/>
     </div>
   );
 }
