@@ -16,7 +16,6 @@ import {
   Calendar,
   Filter,
 } from "lucide-react";
-
 import { Button } from "~/components/ui/button";
 import {
   Table,
@@ -36,6 +35,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
+import DateRangePicker from "./DateRangePicker";
+import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
+import { format } from "date-fns";
 const data: TLaunch[] = [
   {
     id: "01",
@@ -363,48 +366,36 @@ function StatusFilter() {
 }
 //////////////////////////////////////////
 function TimeFilter() {
-  const timeFilters = [
-    {
-      title: "Past 6 Month",
-      value: "past6Month",
-    },
-    {
-      title: "Past Year",
-      value: "pastYear",
-    },
-    {
-      title: "All time",
-      value: "allTime",
-    },
-  ];
-  const [searchParms, setSearchParams] = useSearchParams();
-  function handleFilterChange(time: string) {
-    setSearchParams(
-      (prev) => {
-        prev.set("time", time);
-        return prev;
-      },
-      {
-        preventScrollReset: true,
-      }
-    );
-  }
+  const {getParams} = useUrlSearchParams();
+  const from = getParams("from")
+  const to = getParams("to");
+  const dateRange = getParams("dateRange");
+
+
   return (
-    <Select onValueChange={handleFilterChange}>
-      <SelectTrigger className="w-fit gap-2 border-none shadow-none">
+    <Dialog>
+      <DialogTrigger className="flex items-center gap-2">
         <Calendar size={16} />
-        <SelectValue placeholder="Select time duration" />
-      </SelectTrigger>
-      <SelectContent>
-        {timeFilters.map((time) => (
-          <SelectItem key={time.title} value={time.value} className="">
-            {time.title}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+        {/* Select Time */}
+        {to && format(to, "dd-MMM-yy")}
+        {to && from && " - "}
+        {from && format(from, "dd-MMM-yy")}
+        {dateRange}
+      </DialogTrigger>
+      <DialogContent className="max-w-[60vw] !p-3">
+        <DateRangePicker />
+      </DialogContent>
+    </Dialog>
   );
+
 }
+
+{/* <SelectTrigger className="w-fit gap-2 border-none shadow-none">
+  <Calendar size={16} />
+  <SelectValue placeholder="Select time duration" />
+</SelectTrigger>; */}
+
+
 //////////////////////////////////////////
 function Pagination({ table }: { table: TTable<TLaunch> }) {
   return (
