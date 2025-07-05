@@ -24,13 +24,10 @@ import {
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
 import {
-  Dispatch,
-  SetStateAction,
   useCallback,
   useEffect,
   useState,
 } from "react";
-import { useSearchParams } from "@remix-run/react";
 import {
   Select,
   SelectContent,
@@ -44,11 +41,11 @@ import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { TPayload } from "~/lib/types/payload";
-import axios from "axios";
 import { TApiRespons, TStatus } from "~/lib/types";
 import { TRocket } from "~/lib/types/rocket";
 import { TLaunchPad } from "~/lib/types/launchPad";
 import { useLaunches } from "store/store";
+import { getLaunches, getLaunchPads, getPayloads, getRockets } from "~/services/api";
 export type TLaunchTable = {
   no: number;
   launched: string;
@@ -68,25 +65,31 @@ export const columns: ColumnDef<TLaunchTable>[] = [
     accessorKey: "launched",
     header: "Launched (UTC)",
     cell: ({ row }) => (
-      <div className="font-medium">
+      <p className="font-medium  sm:text-sm text-xs">
         {format(row.getValue("launched"), "dd MMM yyyy  hh:mm")}
-      </div>
+      </p>
     ),
   },
   {
     accessorKey: "location",
     header: "Location",
-    // cell: ({ row }) => <div>{row.getValue("location")}</div>,
+    cell: ({ row }) => (
+      <p className=" sm:text-sm text-xs">{row.getValue("location")}</p>
+    ),
   },
   {
     accessorKey: "mission",
     header: "Mission",
-    // cell: ({ row }) => <div>{row.getValue("mission")}</div>,
+    cell: ({ row }) => (
+      <p className=" sm:text-sm text-xs">{row.getValue("mission")}</p>
+    ),
   },
   {
     accessorKey: "orbit",
     header: "Orbit",
-    // cell: ({ row }) => <div>{row.getValue("orbit")}</div>,
+    cell: ({ row }) => (
+      <p className="md:text-sm sm:text-xs">{row.getValue("orbit")}</p>
+    ),
   },
   {
     accessorKey: "status",
@@ -121,18 +124,7 @@ export const columns: ColumnDef<TLaunchTable>[] = [
     cell: ({ row }) => <p className="text-nowrap">{row.getValue("rocket")}</p>,
   },
 ];
-async function getLaunches() {
-  return await axios.get(`https://api.spacexdata.com/v4/launches`);
-}
-async function getRockets() {
-  return await axios.get(`https://api.spacexdata.com/v4/rockets`);
-}
-async function getPayloads() {
-  return await axios.get(`https://api.spacexdata.com/v4/payloads`);
-}
-async function getLaunchPads() {
-  return await axios.get(`https://api.spacexdata.com/v4/launchpads`);
-}
+
 export default function LaunchesTable() {
   const {
     setLaunchesData,
@@ -275,7 +267,7 @@ export default function LaunchesTable() {
                   return (
                     <TableHead
                       key={header.id}
-                      className="font-medium text-gray-700"
+                      className="font-medium text-gray-700 max-sm:text-sm"
                     >
                       {header.isPlaceholder
                         ? null
@@ -420,10 +412,6 @@ function Pagination({ table }: { table: TTable<TLaunchTable> }) {
   const totalPages = Math.ceil((tableData?.length || 1) / PAGE_SIZE);
   return (
     <div className="flex items-center mt-auto justify-end space-x-2 py-4">
-      <div className="flex-1 text-sm text-muted-foreground">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
-      </div>
       <div className="space-x-2">
         <Button
           variant="outline"
