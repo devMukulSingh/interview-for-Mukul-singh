@@ -46,7 +46,7 @@ import {
   getLaunchPads,
   getPayloads,
   getRockets,
-} from "~/services/api";
+} from "~/service/api";
 import LaunchDetailDialog from "./LaunchDetailDialog";
 import { launchStatus } from "~/lib/constants";
 export function StatusFilter({}) {

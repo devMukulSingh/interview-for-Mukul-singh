@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Calendar, Filter } from "lucide-react";
+import { Calendar, Filter, Loader2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Table,
@@ -46,12 +46,13 @@ import {
   getLaunchPads,
   getPayloads,
   getRockets,
-} from "~/services/api";
+} from "~/service/api";
 import LaunchDetailDialog from "./LaunchDetailDialog";
 import { launchStatus } from "~/lib/constants";
 import { StatusFilter, TimeFilter } from "./Filters";
 import { TLaunch } from "~/lib/types/launch";
-
+import { toast } from "sonner";
+import Spinner from "./Spinner";
 const PAGE_SIZE = 12;
 export const columns: ColumnDef<TLaunchTable>[] = [
   {
@@ -142,19 +143,19 @@ export default function LaunchesTable() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isOpenDialog, setIsOpenDialog] = useState(false);
-  const { data: launchesData } = useQuery<TApiRespons<TLaunch[]>>({
+  const { data: launchesData,error:getLaunchesError,isFetching:isFetchingLaunches } = useQuery<TApiRespons<TLaunch[]>>({
     queryFn: getLaunches,
     queryKey: ["get_launches"],
   });
-  const { data: rocketsData } = useQuery<TApiRespons<TRocket[]>>({
+  const { data: rocketsData,error:getRocketError,isFetching:isFetchingRocket } = useQuery<TApiRespons<TRocket[]>>({
     queryKey: ["get_rockets"],
     queryFn: getRockets,
   });
-  const { data: payloadData } = useQuery<TApiRespons<TPayload[]>>({
+  const { data: payloadData,error:getPayloadError,isFetching:isFetchingPayload } = useQuery<TApiRespons<TPayload[]>>({
     queryKey: ["get_payloads"],
     queryFn: getPayloads,
   });
-  const { data: launchPadsData } = useQuery<TApiRespons<TLaunchPad[]>>({
+  const { data: launchPadsData,error:getLaunchPadError,isFetching:isFetchingLaunchPads } = useQuery<TApiRespons<TLaunchPad[]>>({
     queryKey: ["get_launch_pads"],
     queryFn: getLaunchPads,
   });
@@ -192,8 +193,8 @@ export default function LaunchesTable() {
         payloadType: payload?.type,
         launchSite: launchPad?.name,
         image: launchPad?.images?.large?.[0],
-        links:launch.links,
-        description:rocket?.description
+        links: launch.links,
+        description: rocket?.description,
       });
     }
     return data;
@@ -268,6 +269,15 @@ export default function LaunchesTable() {
       setTableData(filtered);
     }
   }, [to, from, status, launchesFromStore]);
+  if(getLaunchesError || getLaunchPadError || getRocketError || getPayloadError){
+    console.log({
+      getLaunchesError,
+      getLaunchPadError,
+      getRocketError,
+      getPayloadError,
+    });
+    toast("Something went wrong")
+  }
   return (
     <>
       <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
@@ -275,8 +285,8 @@ export default function LaunchesTable() {
           <TimeFilter />
           <StatusFilter />
         </div>
-        <div className="rounded-md border px-2">
-          <Table>
+        <div className="rounded-md border">
+          <Table className="sm:overflow-hidden min-h-[63vh]">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="bg-gray-50">
@@ -298,8 +308,18 @@ export default function LaunchesTable() {
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
+
+            <TableBody className="">
+              {isFetchingLaunchPads ||
+              isFetchingLaunches ||
+              isFetchingPayload ||
+              isFetchingRocket ? (
+                <TableRow className="">
+                  <TableCell colSpan={columns.length}>
+                    <Spinner />
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row, index) => (
                   <TableRow
                     key={row.id}
