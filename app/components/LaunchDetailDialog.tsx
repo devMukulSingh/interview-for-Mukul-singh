@@ -22,8 +22,8 @@ export default function LaunchDetailDialog({ isOpen, onClose }: Props) {
   );
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <div className="h-fit">
+      <DialogContent className="py-2 sm:py-5 px-4">
+        <div className="sm:h-fit">
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0">
               <img
@@ -81,7 +81,6 @@ export default function LaunchDetailDialog({ isOpen, onClose }: Props) {
               </div>
             </div>
           </div>
-
           <div className="space-y-4">
             <div className="text-xs sm:text-sm text-gray-700 leading-relaxed">
               <p>
@@ -96,7 +95,7 @@ export default function LaunchDetailDialog({ isOpen, onClose }: Props) {
               </p>
             </div>
 
-            <div className="space-y-1">
+            <div className="sm:space-y-1">
               <KeyValue
                 value={activeLaunchData?.flightNumber?.toString()}
                 itemKey="Flight Number"
@@ -154,11 +153,11 @@ function KeyValue({
   value: string | undefined;
 }) {
   return (
-    <div className="flex  items-start py-2 border-b">
-      <p className="text-xs sm:text-sm text-gray-600 font-medium w-40  mr-4">
+    <div className="flex sm:items-start py-2 border-b sm:justify-normal justify-between">
+      <p className="text-xs sm:text-sm text-gray-600 font-medium sm:w-40  mr-4">
         {itemKey}
       </p>
-      <p className="text-xs sm:text-sm text-gray-900 font-medium text-right">
+      <p className="text-xs sm:text-sm text-gray-900 font-medium sm:text-right">
         {value}
       </p>
     </div>

@@ -60,8 +60,8 @@ export function StatusFilter({}) {
         value={getParams("status") || ""}
         onValueChange={handleFilterChange}
       >
-        <SelectTrigger className="w-fit gap-2 border-none shadow-none">
-          <Filter size={16} />
+        <SelectTrigger className="w-fit gap-2 border-none shadow-none max-sm:text-sm text-nowrap">
+          <Filter className="sm:size-4 size-[14px]"  />
           <SelectValue placeholder="Select Status" />
         </SelectTrigger>
         <SelectContent>
@@ -83,8 +83,8 @@ export function TimeFilter() {
   const dateRange = getParams("dateRange");
   return (
     <Dialog>
-      <DialogTrigger className="flex items-center gap-2">
-        <Calendar size={16} />
+      <DialogTrigger className="flex items-center gap-2 max-sm:text-sm text-nowrap">
+        <Calendar className="sm:size-4 size-[14px]" />
         {/* Select Time */}
         {dateRange
           ? dateRange

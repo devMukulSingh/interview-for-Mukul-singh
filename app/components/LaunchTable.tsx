@@ -53,6 +53,7 @@ import { StatusFilter, TimeFilter } from "./Filters";
 import { TLaunch } from "~/lib/types/launch";
 import { toast } from "sonner";
 import Spinner from "./Spinner";
+import useIsMobile from "~/lib/hooks/useIsMobile";
 const PAGE_SIZE = 12;
 export const columns: ColumnDef<TLaunchTable>[] = [
   {
@@ -61,7 +62,14 @@ export const columns: ColumnDef<TLaunchTable>[] = [
   },
   {
     accessorKey: "id",
-    // header: "id",
+    meta: {
+      hideOnMobile: true,
+    },
+    cell: ({ getValue }) => (
+      <p className="font-medium max-sm:hidden sm:text-sm text-xs">
+        {getValue() as string}
+      </p>
+    ),
   },
   {
     accessorKey: "launched",
@@ -134,6 +142,7 @@ export default function LaunchesTable() {
     setTableData,
     launchesData: launchesFromStore,
   } = useLaunches();
+  const isMobile = useIsMobile();
   const { getParams, setParams } = useUrlSearchParams();
   const from = getParams("from");
   const to = getParams("to");
@@ -143,19 +152,35 @@ export default function LaunchesTable() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [isOpenDialog, setIsOpenDialog] = useState(false);
-  const { data: launchesData,error:getLaunchesError,isFetching:isFetchingLaunches } = useQuery<TApiRespons<TLaunch[]>>({
+  const {
+    data: launchesData,
+    error: getLaunchesError,
+    isFetching: isFetchingLaunches,
+  } = useQuery<TApiRespons<TLaunch[]>>({
     queryFn: getLaunches,
     queryKey: ["get_launches"],
   });
-  const { data: rocketsData,error:getRocketError,isFetching:isFetchingRocket } = useQuery<TApiRespons<TRocket[]>>({
+  const {
+    data: rocketsData,
+    error: getRocketError,
+    isFetching: isFetchingRocket,
+  } = useQuery<TApiRespons<TRocket[]>>({
     queryKey: ["get_rockets"],
     queryFn: getRockets,
   });
-  const { data: payloadData,error:getPayloadError,isFetching:isFetchingPayload } = useQuery<TApiRespons<TPayload[]>>({
+  const {
+    data: payloadData,
+    error: getPayloadError,
+    isFetching: isFetchingPayload,
+  } = useQuery<TApiRespons<TPayload[]>>({
     queryKey: ["get_payloads"],
     queryFn: getPayloads,
   });
-  const { data: launchPadsData,error:getLaunchPadError,isFetching:isFetchingLaunchPads } = useQuery<TApiRespons<TLaunchPad[]>>({
+  const {
+    data: launchPadsData,
+    error: getLaunchPadError,
+    isFetching: isFetchingLaunchPads,
+  } = useQuery<TApiRespons<TLaunchPad[]>>({
     queryKey: ["get_launch_pads"],
     queryFn: getLaunchPads,
   });
@@ -199,12 +224,6 @@ export default function LaunchesTable() {
     }
     return data;
   }, [launchesData, rocketsData, payloadData, launchPadsData]);
-  useEffect(() => {
-    if (!launchesData || !rocketsData || !payloadData || !launchPadsData)
-      return;
-    setLaunchesData(getFilteredData());
-    setTableData(getFilteredData());
-  }, [launchesData, rocketsData, payloadData, launchPadsData]);
 
   const table = useReactTable({
     data: tableData || [],
@@ -224,6 +243,9 @@ export default function LaunchesTable() {
       rowSelection,
     },
     initialState: {
+      columnVisibility: {
+        id: !isMobile,
+      },
       pagination: {
         pageSize: 12,
       },
@@ -234,6 +256,12 @@ export default function LaunchesTable() {
     setIsOpenDialog(true);
     setParams("activeId", id);
   }
+  useEffect(() => {
+    if (!launchesData || !rocketsData || !payloadData || !launchPadsData)
+      return;
+    setLaunchesData(getFilteredData());
+    setTableData(getFilteredData());
+  }, [launchesData, rocketsData, payloadData, launchPadsData]);
   useEffect(() => {
     if (!launchesFromStore) return;
     if (to && from && status) {
@@ -269,18 +297,29 @@ export default function LaunchesTable() {
       setTableData(filtered);
     }
   }, [to, from, status, launchesFromStore]);
-  if(getLaunchesError || getLaunchPadError || getRocketError || getPayloadError){
+  useEffect(() => {
+    table.setColumnVisibility({
+      id: !isMobile,
+    });
+  }, [isMobile, table]);
+  if (
+    getLaunchesError ||
+    getLaunchPadError ||
+    getRocketError ||
+    getPayloadError
+  ) {
     console.log({
       getLaunchesError,
       getLaunchPadError,
       getRocketError,
       getPayloadError,
     });
-    toast("Something went wrong")
+    toast("Something went wrong");
   }
+
   return (
     <>
-      <div className="w-full p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
+      <div className="w-full p-3 sm:p-6 bg-white xl:max-w-[1100px] self-center flex flex-col gap-5">
         <div className="flex justify-between itens-center">
           <TimeFilter />
           <StatusFilter />
@@ -291,6 +330,12 @@ export default function LaunchesTable() {
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="bg-gray-50">
                   {headerGroup.headers.map((header) => {
+                    // const hideOnMobile = (
+                    //   header.column.columnDef.meta as {
+                    //     hideOnMobile?: boolean;
+                    //   }
+                    // )?.hideOnMobile;
+                    // if (hideOnMobile && isMobile) return null;
                     return (
                       <TableHead
                         key={header.id}
@@ -330,18 +375,20 @@ export default function LaunchesTable() {
                         : "cursor-pointer bg-gray-50/50"
                     }
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        onClick={() => handleRowClick(row.original.id)}
-                        key={cell.id}
-                        className="py-3"
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      return (
+                        <TableCell
+                          onClick={() => handleRowClick(row.original.id)}
+                          key={cell.id}
+                          className="py-3"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))
               ) : (
@@ -372,7 +419,7 @@ function Pagination({ table }: { table: TTable<TLaunchTable> }) {
   const { tableData } = useLaunches();
   const totalPages = Math.ceil((tableData?.length || 1) / PAGE_SIZE);
   return (
-    <div className="flex items-center mt-auto justify-end space-x-2 py-4">
+    <div className="flex items-center mt-auto justify-center sm:justify-end space-x-2 py-4">
       <div className="space-x-2">
         <Button
           variant="outline"
@@ -380,7 +427,7 @@ function Pagination({ table }: { table: TTable<TLaunchTable> }) {
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
-          Previous
+          {"<"}
         </Button>
         <Button
           variant="outline"
@@ -417,7 +464,7 @@ function Pagination({ table }: { table: TTable<TLaunchTable> }) {
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >
-          Next
+          {">"}
         </Button>
       </div>
     </div>
