@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { TLaunchTable } from '~/components/LaunchTable'
+import { TLaunchTable } from '~/lib/types'
 
 type TStore  = {
     launchesData : TLaunchTable[] | null

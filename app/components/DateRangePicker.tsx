@@ -5,10 +5,10 @@ import { Calendar } from "~/components/ui/calendar";
 import dayjs from "dayjs";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
-import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
-import { useLaunches } from "store/store";
+import { useLaunches } from "~/store/store";
 import { Button } from "./ui/button";
 import { useNavigate } from "@remix-run/react";
+import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
 
 const predefinedRanges = {
   "Past Week": {
@@ -48,7 +48,7 @@ export default function DateRangePicker() {
   const [selectedRange, setSelectedRange] = React.useState<string | null>(null);
   const handleRangeClick = (range: string) => {
     //@ts-ignore
-    const { start, end } = predefinedRanges[range] ;
+    const { start, end } = predefinedRanges[range];
     const filtered =
       tableData?.filter(
         (data) => data.launched >= start && data.launched <= end

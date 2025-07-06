@@ -40,7 +40,7 @@ import { TPayload } from "~/lib/types/payload";
 import { TApiRespons, TLaunchTable, TStatus } from "~/lib/types";
 import { TRocket } from "~/lib/types/rocket";
 import { TLaunchPad } from "~/lib/types/launchPad";
-import { useLaunches } from "store/store";
+import { useLaunches } from "~/store/store";
 import {
   getLaunches,
   getLaunchPads,
@@ -61,7 +61,7 @@ export function StatusFilter({}) {
         onValueChange={handleFilterChange}
       >
         <SelectTrigger className="w-fit gap-2 border-none shadow-none max-sm:text-sm text-nowrap">
-          <Filter className="sm:size-4 size-[14px]"  />
+          <Filter className="sm:size-4 size-[14px]" />
           <SelectValue placeholder="Select Status" />
         </SelectTrigger>
         <SelectContent>

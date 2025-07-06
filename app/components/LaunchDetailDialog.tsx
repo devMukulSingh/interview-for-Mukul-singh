@@ -1,4 +1,4 @@
-import { useLaunches } from "store/store";
+import { useLaunches } from "~/store/store";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import useUrlSearchParams from "~/lib/hooks/useUrlSearchParams";
 import { Badge } from "./ui/badge";
@@ -138,7 +138,6 @@ export default function LaunchDetailDialog({ isOpen, onClose }: Props) {
               />
             </div>
           </div>
-          
         </div>
       </DialogContent>
     </Dialog>

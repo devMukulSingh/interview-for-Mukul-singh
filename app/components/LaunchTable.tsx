@@ -40,7 +40,7 @@ import { TPayload } from "~/lib/types/payload";
 import { TApiRespons, TLaunchDetail, TLaunchTable, TStatus } from "~/lib/types";
 import { TRocket } from "~/lib/types/rocket";
 import { TLaunchPad } from "~/lib/types/launchPad";
-import { useLaunches } from "store/store";
+import { useLaunches } from "~/store/store";
 import {
   getLaunches,
   getLaunchPads,
